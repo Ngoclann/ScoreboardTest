@@ -1,0 +1,96 @@
+package com.lan.DAO;
+
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+
+import com.lan.model.User;
+
+public class UserDAO {
+	private DBContext db;
+
+	public UserDAO() throws Exception {
+		this.db = DBContext.getInstance();
+	}
+
+	public void createUser(User u) {
+		String sql = "insert into user values (?,?,?)";
+		try {
+			PreparedStatement st = this.db.getConnection().prepareStatement(sql);
+			st.setString(1, u.getName());
+			st.setInt(2, u.getWins_count());
+			st.setInt(3, u.getLoses_count());
+			st.executeUpdate();
+		} catch (SQLException e) {
+		}
+	}
+
+	public void updateUser(User u) {
+		String sql = "update [User]\n" + "set name = ?,wins_count = ?,loses_count = ?\n" + "where id = ?";
+		try {
+			PreparedStatement st = this.db.getConnection().prepareStatement(sql);
+			st.setString(1, u.getName());
+			st.setInt(2, u.getWins_count());
+			st.setInt(3, u.getLoses_count());
+			st.executeUpdate();
+		} catch (SQLException e) {
+		}
+	}
+
+	public void deleteUser(int id) {
+		String sql = "delete from [User] where id = ?";
+		try {
+			PreparedStatement st = this.db.getConnection().prepareStatement(sql);
+			st.setInt(1, id);
+			st.executeUpdate();
+		} catch (SQLException e) {
+		}
+	}
+
+	public User getUserbyID(int id) {
+		User u = null;
+		String sql = "select* from [User] where id = ?";
+		try {
+			PreparedStatement st = this.db.getConnection().prepareStatement(sql);
+			st.setInt(1, id);
+			ResultSet rs = st.executeQuery();
+			while (rs.next()) {
+				u = new User(id, rs.getString(1), rs.getInt(2), rs.getInt(3));
+			}
+		} catch (SQLException e) {
+		}
+		return u;
+	}
+
+	public ArrayList<User> getAllUsers() {
+		ArrayList<User> list = new ArrayList<>();
+		String sql = "select * from user";
+		PreparedStatement st = null;
+		ResultSet rs = null;
+		try {
+			st = this.db.getConnection().prepareStatement(sql);
+			rs = st.executeQuery();
+			while (rs.next()) {
+				list.add(new User(rs.getInt(1), rs.getString(2), rs.getInt(3), rs.getInt(4)));
+			}
+			return list;
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return null;
+		}	finally {
+			try {
+				if(this.db.getConnection() != null) {
+					this.db.getConnection().close();
+				} else if(st != null) {
+					st.close();
+				} else if (rs != null) {
+					rs.close();
+				}
+			} catch(SQLException e) {
+				e.printStackTrace();
+			}
+			
+		}
+	}
+}

@@ -1,0 +1,39 @@
+package com.lan.controller;
+
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+
+import com.lan.DAO.UserDAO;
+
+@WebServlet(urlPatterns = {"/api"})
+public class API extends HttpServlet{
+	private static final long serialVersionUID = 1L;
+	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		try {
+            UserDAO udb = new UserDAO();
+            
+            ArrayList<User> users = udb.getAllUsers();
+            
+            Gson gson = new Gson();
+            
+            //JavaScript Object Notation
+            String usersJson = gson.toJson(users);
+            
+            PrintWriter writer = response.getWriter();
+            
+            response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
+            
+            writer.write(usersJson);
+            writer.close();
+        } catch (Exception ex) {
+            
+        }
+	}
+
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		doGet(request, response);
+	}
+}
