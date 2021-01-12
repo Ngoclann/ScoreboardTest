@@ -1,18 +1,11 @@
 package com.lan.controller;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -21,10 +14,10 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lan.filter.Secured;
 import com.lan.model.GameModel;
 import com.lan.model.LogModel;
 import com.lan.model.PlayerModel;
@@ -35,7 +28,6 @@ import com.lan.service.impl.GameService;
 import com.lan.service.impl.LogService;
 import com.lan.service.impl.PlayerService;
 import com.lan.utils.GetIdFromPlayers;
-import com.lan.utils.HttpUtil;
 import com.lan.utils.SetGameInfo;
 import com.lan.utils.SetListPlayer;
 import com.lan.viewmodel.GameInfoModel;
@@ -52,52 +44,17 @@ public class GameController extends HttpServlet {
   private SetListPlayer setListPlayer = new SetListPlayer();
 
   @POST
-  @Path("/login")
-  @Consumes({ MediaType.APPLICATION_JSON })
-  @Produces({ MediaType.APPLICATION_JSON })
-  public void login(@Context HttpServletRequest request, @Context HttpServletResponse response, InputStream requestBody)
-      throws ServletException, IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    request.setCharacterEncoding("UTF-8");
-    response.setContentType("application/json");
-    BufferedReader reader = new BufferedReader(new InputStreamReader(requestBody));
-    PlayerModel playerModel = HttpUtil.of(reader).toModel(PlayerModel.class);
-    String username = playerModel.getUsername();
-    String password = playerModel.getPassword();
-    PlayerModel playerLogin = playerService.findByUsernameAndPassword(username, password);
-    if (playerLogin == null) {
-      mapper.writeValue(response.getOutputStream(), "Invalid Username or Password");
-      return;
-    } else if (playerLogin.getStatus() == 1) {
-      mapper.writeValue(response.getOutputStream(), "Already logged in");
-      return;
-    } else {
-      playerService.updateStatus(playerLogin.getPlayer_id(), 1);
-      mapper.writeValue(response.getOutputStream(), "Login successfully");
-      return;
-    }
-
-  }
-
-  @POST
   @Path("/logout")
   @Consumes({ MediaType.APPLICATION_JSON })
   @Produces({ MediaType.APPLICATION_JSON })
-  public void logout(@Context HttpServletRequest request, @Context HttpServletResponse response,
-      InputStream requestBody) throws ServletException, IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    request.setCharacterEncoding("UTF-8");
-    response.setContentType("application/json");
-    BufferedReader reader = new BufferedReader(new InputStreamReader(requestBody));
-    PlayerModel playerModel = HttpUtil.of(reader).toModel(PlayerModel.class);
+  @Secured
+  public Response logout(PlayerModel playerModel) {
     PlayerModel playerLogout = playerService.findOne(playerModel.getPlayer_id());
     if (playerLogout == null) {
-      mapper.writeValue(response.getOutputStream(), "Invalid player id");
-      return;
+      return Response.ok().entity("Invalid player id").build();
     } else {
       playerService.updateStatus(playerLogout.getPlayer_id(), 0);
-      mapper.writeValue(response.getOutputStream(), "Logged out");
-      return;
+      return Response.ok().entity("Logged out").build();
     }
   }
 
@@ -105,13 +62,8 @@ public class GameController extends HttpServlet {
   @Path("/")
   @Consumes({ MediaType.APPLICATION_JSON })
   @Produces({ MediaType.APPLICATION_JSON })
-  public void startGame(@Context HttpServletRequest request, @Context HttpServletResponse response,
-      InputStream requestBody) throws ServletException, IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    request.setCharacterEncoding("UTF-8");
-    response.setContentType("application/json");
-    BufferedReader reader = new BufferedReader(new InputStreamReader(requestBody));
-    GameModel model = HttpUtil.of(reader).toModel(GameModel.class);
+  @Secured
+  public Response startGame(GameModel model) {
     List<Map<String, String>> listPlayers = new ArrayList<Map<String, String>>();
     List<Long> ids = GetIdFromPlayers.getIdFromPlayers(model);
     GameInfoModel game = new GameInfoModel();
@@ -121,11 +73,9 @@ public class GameController extends HttpServlet {
       Long id = ids.get(i);
       PlayerModel modelLogIn = playerService.findOne(id);
       if (modelLogIn == null || modelLogIn.getStatus() == 0) {
-        mapper.writeValue(response.getOutputStream(), "Invalid player id or Not login. Please restart");
-        return;
+        return Response.ok().entity("Invalid player id or Not login. Please restart").build();
       } else if (logService.findByPlayerAndStatus(id, 1) != null) {
-        mapper.writeValue(response.getOutputStream(), "1-2 players are already in game. Please choose another players");
-        return;
+        return Response.ok().entity("1-2 players are already in game. Please choose another players").build();
       } else {
         player.put("id", id.toString());
         player.put("points", "0");
@@ -143,7 +93,7 @@ public class GameController extends HttpServlet {
       game.setId(id);
       ShowGameInfo gameInfo = new ShowGameInfo();
       gameInfo.setGame(game);
-      mapper.writeValue(response.getOutputStream(), gameInfo);
+      return Response.ok().entity(gameInfo).build();
     } else {
       LogModel logModel = new LogModel(1, ids.get(0), ids.get(1), 0L, 0L, 0L, 0L, modelLog.getGameID() + 1);
       id = logService.save(logModel);
@@ -153,7 +103,7 @@ public class GameController extends HttpServlet {
       game.setId(id);
       ShowGameInfo gameInfo = new ShowGameInfo();
       gameInfo.setGame(game);
-      mapper.writeValue(response.getOutputStream(), gameInfo);
+      return Response.ok().entity(gameInfo).build();
     }
 
   }
@@ -162,18 +112,12 @@ public class GameController extends HttpServlet {
   @Path("/{id}/{action}/{point}")
   @Consumes({ MediaType.APPLICATION_JSON })
   @Produces({ MediaType.APPLICATION_JSON })
-  public void scorePoint(@PathParam("id") Long id, @PathParam("action") String action, @PathParam("point") Long point,
-      @Context HttpServletRequest request, @Context HttpServletResponse response, InputStream requestBody)
-      throws ServletException, IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    request.setCharacterEncoding("UTF-8");
-    response.setContentType("application/json");
-    BufferedReader reader = new BufferedReader(new InputStreamReader(requestBody));
-    PlayerModel playerModel = HttpUtil.of(reader).toModel(PlayerModel.class);
+  @Secured
+  public Response scorePoint(@PathParam("id") Long id, @PathParam("action") String action,
+      @PathParam("point") Long point, PlayerModel playerModel) {
     LogModel model = logService.findOne(id, 1);
     if (model == null) {
-      mapper.writeValue(response.getOutputStream(), "Invalid game id");
-      return;
+      return Response.ok().entity("Invalid game id").build();
     } else {
       if (action.equals("score")) {
         Long playerId = playerModel.getPlayer_id();
@@ -199,13 +143,12 @@ public class GameController extends HttpServlet {
           ShowGameInfo gameInfo = new ShowGameInfo();
           gameInfo.setGame(game);
 
-          mapper.writeValue(response.getOutputStream(), gameInfo);
+          return Response.ok().entity(gameInfo).build();
         } else {
-          mapper.writeValue(response.getOutputStream(), "Invalid player id");
-          return;
+          return Response.ok().entity("Invalid player id").build();
         }
       } else {
-        mapper.writeValue(response.getOutputStream(), "Invalid action");
+        return Response.ok().entity("Invalid action").build();
       }
     }
   }
@@ -214,20 +157,13 @@ public class GameController extends HttpServlet {
   @Path("/{id}/{action}")
   @Consumes({ MediaType.APPLICATION_JSON })
   @Produces({ MediaType.APPLICATION_JSON })
-  public void resetPoint(@PathParam("id") Long id, @PathParam("action") String action,
-      @Context HttpServletRequest request, @Context HttpServletResponse response, InputStream requestBody)
-      throws ServletException, IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    request.setCharacterEncoding("UTF-8");
-    response.setContentType("application/json");
-    BufferedReader reader = new BufferedReader(new InputStreamReader(requestBody));
-    PlayerModel playerModel = HttpUtil.of(reader).toModel(PlayerModel.class);
+  @Secured
+  public Response resetPoint(@PathParam("id") Long id, @PathParam("action") String action, PlayerModel playerModel) {
     LogModel model = logService.findOne(id, 1);
     LogModel logModel = logService.findByPlayerAndStatus(playerModel.getPlayer_id(), 1);
     LogModel modelnear = logService.findNearLastByPlayerAndStatus(playerModel.getPlayer_id(), 1);
     if (model == null) {
-      mapper.writeValue(response.getOutputStream(), "Invalid game id");
-      return;
+      return Response.ok().entity("Invalid game id").build();
     } else {
       if (action.equals("reset_point")) {
         if (logModel.getPlayer1() == playerModel.getPlayer_id()) {
@@ -235,8 +171,7 @@ public class GameController extends HttpServlet {
         } else if (logModel.getPlayer2() == playerModel.getPlayer_id()) {
           logService.deleteLastLog(logModel.getId());
         } else {
-          mapper.writeValue(response.getOutputStream(), "Invalid player id");
-          return;
+          return Response.ok().entity("Invalid player id").build();
         }
       }
       List<Map<String, String>> listPlayers = new ArrayList<Map<String, String>>();
@@ -247,23 +182,19 @@ public class GameController extends HttpServlet {
       game.setWinner(0L);
       ShowGameInfo gameInfo = new ShowGameInfo();
       gameInfo.setGame(game);
-      mapper.writeValue(response.getOutputStream(), gameInfo);
+      return Response.ok().entity(gameInfo).build();
     }
   }
 
   @PUT
   @Path("/{id}/{action}")
   @Produces({ MediaType.APPLICATION_JSON })
-  public void endGame(@PathParam("id") Long id, @PathParam("action") String action, @Context HttpServletRequest request,
-      @Context HttpServletResponse response) throws ServletException, IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    request.setCharacterEncoding("UTF-8");
-    response.setContentType("application/json");
+  @Secured
+  public Response endGame(@PathParam("id") Long id, @PathParam("action") String action) {
     GameModel gameModel = new GameModel();
     LogModel logModel = logService.findOne(id, 1);
     if (logModel == null) {
-      mapper.writeValue(response.getOutputStream(), "Invalid gane id or game have not started to end");
-      return;
+      return Response.ok().entity("Invalid gane id or game have not started to end").build();
     } else {
       if (action.equals("end-match")) {
         GameInfoModel game = new GameInfoModel();
@@ -286,7 +217,7 @@ public class GameController extends HttpServlet {
         game.setId(id);
         ShowGameInfo gameInfo = new ShowGameInfo();
         gameInfo.setGame(game);
-        mapper.writeValue(response.getOutputStream(), gameInfo);
+        return Response.ok().entity(gameInfo).build();
       } else if (action.equals("end-game")) {
         Long gameId = null;
         logModel.setPoint1(logModel.getPoint1() + logModel.getCpoint1());
@@ -339,10 +270,9 @@ public class GameController extends HttpServlet {
         SetGameInfo setGameIndo = new SetGameInfo();
         ShowGameInfo gameInfo = new ShowGameInfo();
         setGameIndo.setGameInfo(listPlayers, gameModel, gameId, gameInfo);
-        mapper.writeValue(response.getOutputStream(), gameInfo);
+        return Response.ok().entity(gameInfo).build();
       } else {
-        mapper.writeValue(response.getOutputStream(), "Invalid action");
-        return;
+        return Response.ok().entity("Invalid action").build();
       }
     }
   }
@@ -350,11 +280,8 @@ public class GameController extends HttpServlet {
   @GET
   @Path("/{id}")
   @Produces({ MediaType.APPLICATION_JSON })
-  public void getGameDetail(@PathParam("id") Long id, @Context HttpServletRequest request,
-      @Context HttpServletResponse response) throws ServletException, IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    request.setCharacterEncoding("UTF-8");
-    response.setContentType("application/json");
+  @Secured
+  public Response getGameDetail(@PathParam("id") Long id) {
     LogModel logModel = logService.findOne(id, 0);
     if (logModel != null) {
       List<Map<String, String>> listPlayers = new ArrayList<Map<String, String>>();
@@ -371,21 +298,17 @@ public class GameController extends HttpServlet {
       }
       ShowGameInfo gameInfo = new ShowGameInfo();
       gameInfo.setGame(game);
-      mapper.writeValue(response.getOutputStream(), gameInfo);
+      return Response.ok().entity(gameInfo).build();
     } else {
-      mapper.writeValue(response.getOutputStream(), "Id not found to show or game have not ended");
-      return;
+      return Response.ok().entity("Id not found to show or game have not ended").build();
     }
   }
 
   @GET
   @Path("/leaderboard")
   @Produces({ MediaType.APPLICATION_JSON })
-  public void getLeaderboard(@Context HttpServletRequest request, @Context HttpServletResponse response)
-      throws ServletException, IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    request.setCharacterEncoding("UTF-8");
-    response.setContentType("application/json");
+  @Secured
+  public Response getLeaderboard() {
     Leaderboard leaderboard = new Leaderboard();
     PlayerModel playerModel = new PlayerModel();
     playerModel.setListPlayerModel(playerService.findAllByCount());
@@ -399,6 +322,6 @@ public class GameController extends HttpServlet {
       players.add(player);
     }
     leaderboard.setPlayers(players);
-    mapper.writeValue(response.getOutputStream(), leaderboard);
+    return Response.ok().entity(leaderboard).build();
   }
 }
