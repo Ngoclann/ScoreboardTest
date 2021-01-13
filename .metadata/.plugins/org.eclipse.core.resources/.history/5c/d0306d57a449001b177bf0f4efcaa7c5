@@ -1,0 +1,5 @@
+package com.lan.DAO;
+
+public class UserDAO {
+
+}

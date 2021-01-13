@@ -1,0 +1,5 @@
+package com.lan.util;
+
+public class HttpUtil {
+
+}

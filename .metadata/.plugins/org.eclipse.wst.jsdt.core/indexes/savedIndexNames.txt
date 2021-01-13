@@ -1,0 +1,7 @@
+INDEX VERSION 1.4+/home/ngoclann/Documents/intern/workspace/.metadata/.plugins/org.eclipse.wst.jsdt.core/indexes
+1359275725.index
+4250893169.index
+1316388028.index
+417124390.index
+1406578654.index
+58355881.index

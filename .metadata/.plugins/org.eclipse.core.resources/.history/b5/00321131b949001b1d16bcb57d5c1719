@@ -1,0 +1,37 @@
+package com.lan.DAO;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+
+public class DBContext {
+	protected Connection connection;
+	private static DBContext instance;
+
+	public DBContext() throws Exception {
+		try {
+			String url = "jdbc:sqlserver://localhost:1433;databaseName=Scoreboard";
+			String user = "sa";
+			String pass = "123456789";
+			Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+			connection = DriverManager.getConnection(url, user, pass);
+		} catch (Exception ex) {
+			throw ex;
+		}
+	}
+
+	public static DBContext getInstance() throws Exception {
+		if (instance == null) {
+			try {
+				instance = new DBContext();
+			} catch (Exception ex) {
+				throw ex;
+			}
+		}
+
+		return instance;
+	}
+
+	public Connection getConnection() {
+		return connection;
+	}
+}

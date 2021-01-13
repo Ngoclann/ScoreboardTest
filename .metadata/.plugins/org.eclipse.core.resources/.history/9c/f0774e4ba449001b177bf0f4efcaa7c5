@@ -1,0 +1,5 @@
+package com.lan.model;
+
+public class User {
+
+}
