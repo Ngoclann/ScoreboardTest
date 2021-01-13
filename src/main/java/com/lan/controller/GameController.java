@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.http.HttpServlet;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -17,7 +16,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import com.lan.filter.Secured;
+import com.lan.auth.annotations.Secured;
 import com.lan.model.GameModel;
 import com.lan.model.LogModel;
 import com.lan.model.PlayerModel;
@@ -35,9 +34,7 @@ import com.lan.viewmodel.Leaderboard;
 import com.lan.viewmodel.ShowGameInfo;
 
 @Path("/games")
-public class GameController extends HttpServlet {
-  private static final long serialVersionUID = 1L;
-
+public class GameController {
   private IGameService gameService = new GameService();
   private IPlayerService playerService = new PlayerService();
   private ILogService logService = new LogService();
@@ -45,9 +42,9 @@ public class GameController extends HttpServlet {
 
   @POST
   @Path("/logout")
-  @Consumes({ MediaType.APPLICATION_JSON })
-  @Produces({ MediaType.APPLICATION_JSON })
   @Secured
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
   public Response logout(PlayerModel playerModel) {
     PlayerModel playerLogout = playerService.findOne(playerModel.getPlayer_id());
     if (playerLogout == null) {
@@ -60,9 +57,9 @@ public class GameController extends HttpServlet {
 
   @POST
   @Path("/")
-  @Consumes({ MediaType.APPLICATION_JSON })
-  @Produces({ MediaType.APPLICATION_JSON })
   @Secured
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
   public Response startGame(GameModel model) {
     List<Map<String, String>> listPlayers = new ArrayList<Map<String, String>>();
     List<Long> ids = GetIdFromPlayers.getIdFromPlayers(model);
@@ -110,9 +107,9 @@ public class GameController extends HttpServlet {
 
   @POST
   @Path("/{id}/{action}/{point}")
-  @Consumes({ MediaType.APPLICATION_JSON })
-  @Produces({ MediaType.APPLICATION_JSON })
   @Secured
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
   public Response scorePoint(@PathParam("id") Long id, @PathParam("action") String action,
       @PathParam("point") Long point, PlayerModel playerModel) {
     LogModel model = logService.findOne(id, 1);
@@ -155,9 +152,9 @@ public class GameController extends HttpServlet {
 
   @DELETE
   @Path("/{id}/{action}")
-  @Consumes({ MediaType.APPLICATION_JSON })
-  @Produces({ MediaType.APPLICATION_JSON })
   @Secured
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
   public Response resetPoint(@PathParam("id") Long id, @PathParam("action") String action, PlayerModel playerModel) {
     LogModel model = logService.findOne(id, 1);
     LogModel logModel = logService.findByPlayerAndStatus(playerModel.getPlayer_id(), 1);
@@ -188,13 +185,14 @@ public class GameController extends HttpServlet {
 
   @PUT
   @Path("/{id}/{action}")
-  @Produces({ MediaType.APPLICATION_JSON })
   @Secured
+  @Produces(MediaType.APPLICATION_JSON)
   public Response endGame(@PathParam("id") Long id, @PathParam("action") String action) {
     GameModel gameModel = new GameModel();
     LogModel logModel = logService.findOne(id, 1);
     if (logModel == null) {
-      return Response.ok().entity("Invalid gane id or game have not started to end").build();
+      return Response.ok()
+          .entity("Invalid gane id or game have not started to end").build();
     } else {
       if (action.equals("end-match")) {
         GameInfoModel game = new GameInfoModel();
@@ -279,8 +277,8 @@ public class GameController extends HttpServlet {
 
   @GET
   @Path("/{id}")
-  @Produces({ MediaType.APPLICATION_JSON })
   @Secured
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getGameDetail(@PathParam("id") Long id) {
     LogModel logModel = logService.findOne(id, 0);
     if (logModel != null) {
@@ -306,8 +304,7 @@ public class GameController extends HttpServlet {
 
   @GET
   @Path("/leaderboard")
-  @Produces({ MediaType.APPLICATION_JSON })
-  @Secured
+  @Produces(MediaType.APPLICATION_JSON)
   public Response getLeaderboard() {
     Leaderboard leaderboard = new Leaderboard();
     PlayerModel playerModel = new PlayerModel();
@@ -324,4 +321,5 @@ public class GameController extends HttpServlet {
     leaderboard.setPlayers(players);
     return Response.ok().entity(leaderboard).build();
   }
+
 }

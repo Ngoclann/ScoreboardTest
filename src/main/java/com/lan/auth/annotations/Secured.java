@@ -1,4 +1,4 @@
-package com.lan.filter;
+package com.lan.auth.annotations;
 
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.TYPE;
